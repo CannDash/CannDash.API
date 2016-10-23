@@ -10,10 +10,12 @@ using System.Web.Http;
 using System.Web.Http.Description;
 using CannDash.API.Infrastructure;
 using CannDash.API.Models;
+using Microsoft.AspNet.SignalR;
+using CannDash.API.Hubs;
 
 namespace CannDash.API.Controllers
 {
-    public class OrdersController : ApiController
+    public class OrdersController : ApiControllerWithHub<OrderHub>
     {
         private CannDashDataContext db = new CannDashDataContext();
 
@@ -119,6 +121,9 @@ namespace CannDash.API.Controllers
             try
             {
                 db.SaveChanges();
+
+                var subscribed = Hub.Clients.Group((order.DispensaryId).ToString());
+                subscribed.updateOrder(order);
             }
             catch (DbUpdateConcurrencyException)
             {
@@ -172,11 +177,61 @@ namespace CannDash.API.Controllers
             //Driver Twilio SMS notification
             var driver = db.Drivers.FirstOrDefault(d => d.DriverId == order.DriverId);
             var messageToDriver = "New Delivery:" + "\n" +
-                                    "Customer: " + customer.FirstName + " " + customer.LastName + "\n" +
+                                    "Order Number:" + order.DispensaryOrderNo + "\n" +
+                                    "Customer Name: " + customer.FirstName + " " + customer.LastName + "\n" +
                                     "Phone:" + customer.Phone + "\n" +
+                                    "Delivery Notes:" + order.DeliveryNotes + "\n" +
                                     "Delivery Address:" + customer.Street + ", " + customer.State + " " + customer.ZipCode;
 
             HelperFunctions.TwilioSMS.SendSms(driver.Phone, messageToDriver);
+
+            var subscribed = Hub.Clients.Group((order.DispensaryId).ToString());
+            subscribed.addNewOrder(new
+            {
+                order.OrderId,
+                order.DispensaryId,
+                order.DispensaryOrderNo,
+                order.DriverId,
+                DriverInfo = new
+                {
+                    order.DriverId,
+                    order.Driver.FirstName,
+                    order.Driver.LastName
+                },
+                order.CustomerId,
+                order.CustomerAddressId,
+                CustomerInfo = new
+                {
+                    order.Customer.FirstName,
+                    order.Customer.LastName,
+                    order.Customer.Email,
+                    order.Customer.Phone
+                },
+                ProductOrders = order.ProductOrders.Select(p => new
+                {
+                    p.ProductOrderId,
+                    p.MenuCategoryId,
+                    p.CategoryName,
+                    p.ProductId,
+                    p.ProductName,
+                    p.OrderQty,
+                    p.Price,
+                    p.Units,
+                    p.Discount,
+                    p.TotalSale
+                }),
+                order.OrderDate,
+                order.DeliveryNotes,
+                order.PickUp,
+                order.Street,
+                order.UnitNo,
+                order.City,
+                order.State,
+                order.ZipCode,
+                order.itemQuantity,
+                order.TotalOrderSale,
+                order.OrderStatus
+            });
 
             return CreatedAtRoute("DefaultApi", new { id = order.OrderId }, order);
         }
