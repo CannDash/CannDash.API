@@ -71,3 +71,4 @@
 \\psf\Home\GitHub\20-CannDash\CannDash.API\CannDash.API\obj\Debug\CannDash.API.csproj.GenerateResource.Cache
 \\psf\Home\GitHub\20-CannDash\CannDash.API\CannDash.API\obj\Debug\CannDash.API.dll
 \\psf\Home\GitHub\20-CannDash\CannDash.API\CannDash.API\obj\Debug\CannDash.API.pdb
+\\psf\Home\GitHub\20-CannDash\CannDash.API\CannDash.API\obj\Debug\CannDash.API.csprojResolveAssemblyReference.cache

@@ -81,8 +81,7 @@ namespace CannDash.API.Controllers
 
             var customers =
                 dispensary.Customers.Select(
-                    c => (dynamic)new
-                    {
+                    c => new {
                         c.CustomerId,
                         c.DispensaryId,
                         c.FirstName,
@@ -99,10 +98,14 @@ namespace CannDash.API.Controllers
                         c.MmicExpiration,
                         c.DoctorLetter
                     });
-            //foreach (var customer in customers)
-            //    customer.address = db.CustomerAddresses.Find(customer.CustomerAddressId);
+            var withAddress =
+                customers.Select(
+                    c => new {
+                        Customer = c,
+                        Address = db.CustomerAddresses.Find(c.CustomerAddressId)
+                    });
 
-            return Ok(customers);
+            return Ok(withAddress);
         }
 
         // GET: api/Dispensaries/5/Drivers
