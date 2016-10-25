@@ -5,6 +5,7 @@ using Microsoft.Owin.Cors;
 using System.Web.Configuration;
 using Microsoft.Owin.Security.ActiveDirectory;
 using System.IdentityModel.Tokens;
+using CannDash;
 
 [assembly: OwinStartup(typeof(CannDash.API.Startup))]
 
