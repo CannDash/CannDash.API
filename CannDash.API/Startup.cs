@@ -6,6 +6,7 @@ using System.Web.Configuration;
 using Microsoft.Owin.Security.ActiveDirectory;
 using System.IdentityModel.Tokens;
 using CannDash;
+using System.Linq;
 
 [assembly: OwinStartup(typeof(CannDash.API.Startup))]
 
@@ -27,7 +28,7 @@ namespace CannDash.API
                     {
                         ValidAudience = auth0Audience,
                         ValidIssuer = auth0Issuer,
-                        //IssuerSigningKeyResolver = (token, securityToken, identifier, parameters) => parameters.IssuerSigningTokens.FirstOrDefault()?.SecurityKeys?.FirstOrDefault()
+                        IssuerSigningKeyResolver = (token, securityToken, identifier, parameters) => parameters.IssuerSigningTokens.FirstOrDefault()?.SecurityKeys?.FirstOrDefault()
                     }
             };
 
