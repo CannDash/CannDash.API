@@ -22,7 +22,7 @@ namespace CannDash.API.Controllers
         public dynamic GetDispensaries()
         {
             return db.Dispensaries.Select(d => new
-            { 
+            {
                 d.DispensaryId,
                 d.CompanyName,
                 d.WeedMapMenu,
@@ -64,7 +64,7 @@ namespace CannDash.API.Controllers
                 dispensary.Zone,
                 dispensary.StatePermit,
                 dispensary.PermitExpirationDate
-                
+
             });
         }
 
@@ -79,31 +79,33 @@ namespace CannDash.API.Controllers
                 return NotFound();
             }
 
-            return Ok(new
-            {
-                Customers = dispensary.Customers.Select(c => new
-                {
-                    c.CustomerId,
-                    c.DispensaryId,
-                    c.FirstName,
-                    c.LastName,
-                    c.Street,
-                    c.UnitNo,
-                    c.City,
-                    c.State,
-                    c.ZipCode,
-                    c.Email,
-                    c.Phone,
-                    c.Gender,
-                    c.DateOfBirth,
-                    c.Age,
-                    c.MedicalReason,
-                    c.DriversLicense,
-                    c.MmicId,
-                    c.MmicExpiration,
-                    c.DoctorLetter
-                }),
-            });
+            var customers =
+                dispensary.Customers.Select(
+                    c => new {
+                        c.CustomerId,
+                        c.DispensaryId,
+                        c.FirstName,
+                        c.LastName,
+                        c.CustomerAddressId,
+                        c.Email,
+                        c.Phone,
+                        c.Gender,
+                        c.DateOfBirth,
+                        c.Age,
+                        c.MedicalReason,
+                        c.DriversLicense,
+                        c.MmicId,
+                        c.MmicExpiration,
+                        c.DoctorLetter
+                    });
+            var withAddress =
+                customers.Select(
+                    c => new {
+                        Customer = c,
+                        Address = db.CustomerAddresses.Find(c.CustomerAddressId)
+                    });
+
+            return Ok(withAddress);
         }
 
         // GET: api/Dispensaries/5/Drivers
@@ -198,7 +200,7 @@ namespace CannDash.API.Controllers
                     i.Inv_HalfOnce,
                     i.Inv_Ounce,
                     i.Inv_Each
-                })       
+                })
             });
         }
 
@@ -221,21 +223,21 @@ namespace CannDash.API.Controllers
                     o.DispensaryOrderNo,
                     o.DispensaryId,
                     o.DriverId,
-                    DriverInfo = new
+                    DriverInfo = (o.Driver != null) ? new
                     {
                         o.DriverId,
                         o.Driver.FirstName,
                         o.Driver.LastName
-                    },
+                    } : null,
                     o.CustomerId,
                     o.CustomerAddressId,
-                    CustomerInfo = new
+                    CustomerInfo = (o.Customer != null) ? new
                     {
                         o.Customer.FirstName,
                         o.Customer.LastName,
                         o.Customer.Email,
                         o.Customer.Phone
-                    },
+                    } : null,
                     ProductOrders = o.ProductOrders.Select(p => new
                     {
                         p.ProductOrderId,
@@ -257,10 +259,10 @@ namespace CannDash.API.Controllers
                     o.City,
                     o.State,
                     o.ZipCode,
-                    o.itemQuantity,
+                    o.ItemQuantity,
                     o.TotalOrderSale,
                     o.OrderStatus
-                })               
+                })
             });
         }
 
@@ -326,6 +328,28 @@ namespace CannDash.API.Controllers
         private bool DispensaryExists(int id)
         {
             return db.Dispensaries.Count(e => e.DispensaryId == id) > 0;
+        }
+
+        // GET: api/Dispensaries/5/Drivers
+        [ResponseType(typeof(Driver))]
+        [HttpGet, Route("api/dispensaries/{dispensaryId}/driverNames")]
+        public IHttpActionResult GetDispensaryDriverNames(int dispensaryId)
+        {
+            Dispensary dispensary = db.Dispensaries.Find(dispensaryId);
+            if (dispensary == null)
+            {
+                return NotFound();
+            }
+
+            return Ok(new
+            {
+                Drivers = dispensary.Drivers.Where(d => d.DriverCheckIn).Select(d => new
+                {
+                    d.DriverId,
+                    d.FirstName,
+                    d.LastName
+                })
+            });
         }
     }
 }

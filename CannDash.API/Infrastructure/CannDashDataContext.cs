@@ -16,6 +16,7 @@ namespace CannDash.API.Infrastructure
 
         public IDbSet<Category> Categories { get; set; }
         public IDbSet<Customer> Customers { get; set; }
+        public IDbSet<CustomerAddress> CustomerAddresses { get; set; }
         public IDbSet<Dispensary> Dispensaries { get; set; }
         public IDbSet<Driver> Drivers { get; set; }
         public IDbSet<Inventory> Inventories { get; set; }
@@ -48,10 +49,10 @@ namespace CannDash.API.Infrastructure
                 .WithRequired(c => c.Customer)
                 .HasForeignKey(c => c.CustomerId);
 
-            modelBuilder.Entity<CustomerAddress>()
-                .HasMany(o => o.Orders)
-                .WithOptional(c => c.CustomerAddress)
-                .HasForeignKey(c => c.CustomerAddressId);
+           // modelBuilder.Entity<CustomerAddress>()
+           //     .HasMany(o => o.Orders)
+           //     .WithOptional(c => c.CustomerAddress)
+           //     .HasForeignKey(c => c.CustomerAddressId);
 
             modelBuilder.Entity<Dispensary>()
                 .HasMany(c => c.Customers)

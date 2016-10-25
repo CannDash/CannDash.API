@@ -19,6 +19,7 @@ namespace CannDash.API.Controllers
 
         // GET: api/Drivers
         //Todo: authorize role for only admin
+        [Authorize]
         public dynamic GetDrivers()
         {
             return db.Drivers.Select(d => new

@@ -60,15 +60,22 @@ namespace CannDash.API.Migrations
                     firstName = personGenerator.GenerateRandomFirstName();
                     lastName = personGenerator.GenerateRandomLastName();
 
+                    context.CustomerAddresses.Add(
+                        new Models.CustomerAddress
+                        {
+                            CustomerAddressId = i,
+                            Street = Generator.GenerateAddress().AddressLine,
+                            City = city,
+                            State = state,
+                            ZipCode = zipcode,
+                        });
+
                     context.Customers.Add(new Models.Customer
                     {
-                        DispensaryId = 14,
+                        DispensaryId = 266,
                         FirstName = firstName,
                         LastName = lastName,
-                        Street = Generator.GenerateAddress().AddressLine,
-                        City = city,
-                        State = state,
-                        ZipCode = zipcode,
+                        CustomerAddressId = i,
                         Email = firstName + '.' + lastName + "@me.com",
                         Phone = "619 123 8798",
                         DateOfBirth = dob,

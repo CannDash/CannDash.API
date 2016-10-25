@@ -21,28 +21,22 @@ namespace CannDash.API.Controllers
         //Todo: authorize role for only admin
         public dynamic GetCustomers()
         {
-            return db.Customers.Select(c => new
-            {
-                c.CustomerId,
-                c.DispensaryId,
-                c.FirstName,
-                c.LastName,
-                c.Street,
-                c.UnitNo,
-                c.City,
-                c.State,
-                c.ZipCode,
-                c.Email,
-                c.Phone,
-                c.Gender,
-                c.DateOfBirth,
-                c.Age,
-                c.MedicalReason,
-                c.DriversLicense,
-                c.MmicId,
-                c.MmicExpiration,
-                c.DoctorLetter
-            });
+            var customers =
+                db.Customers.Select(
+                    c => (dynamic)new
+                    {
+                        c.CustomerId,
+                        c.DispensaryId,
+                        c.FirstName,
+                        c.LastName,
+                        c.CustomerAddressId,
+                        c.Email,
+                        c.Phone
+                    });
+            foreach (var customer in customers)
+                customer.address = db.CustomerAddresses.Find(customer.CustomerAddressId);
+
+            return customers;
         }
 
         // GET: api/customers/5/
@@ -56,28 +50,17 @@ namespace CannDash.API.Controllers
                 return NotFound();
             }
 
-            return Ok(new
-            {
-                customer.CustomerId,
-                customer.DispensaryId,
-                customer.FirstName,
-                customer.LastName,
-                customer.Street,
-                customer.UnitNo,
-                customer.City,
-                customer.State,
-                customer.ZipCode,
-                customer.Email,
-                customer.Phone,
-                customer.Gender,
-                customer.DateOfBirth,
-                customer.Age,
-                customer.MedicalReason,
-                customer.DriversLicense,
-                customer.MmicId,
-                customer.MmicExpiration,
-                customer.DoctorLetter
-            });
+            return Ok(customer);
+        }
+
+        // GET: api/customers/5/
+        [ResponseType(typeof(Customer))]
+        [HttpGet, Route("api/customer/addresses/{customerId}")]
+        public IHttpActionResult GetCustomerAddresses(int customerId)
+        {
+            var addresses = db.CustomerAddresses.Where(a => a.CustomerId == customerId);
+
+            return Ok(addresses);
         }
 
         // PUT: api/Customers/5

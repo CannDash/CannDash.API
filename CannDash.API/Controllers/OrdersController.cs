@@ -42,7 +42,7 @@ namespace CannDash.API.Controllers
             });
         }
 
-        // GET: api/Orders/5
+        // GET: api/Orders/id
         [ResponseType(typeof(Order))]
         public IHttpActionResult GetOrder(int id)
         {
@@ -52,55 +52,25 @@ namespace CannDash.API.Controllers
                 return NotFound();
             }
 
-            return Ok(new
-                {
-                    order.OrderId,
-                    order.DispensaryId,
-                    order.DispensaryOrderNo,
-                    order.DriverId,
-                    DriverInfo = new
-                    {
-                             order.DriverId,
-                             order.Driver.FirstName,
-                             order.Driver.LastName
-                     },
-                     order.CustomerId,
-                     order.CustomerAddressId,
-                     CustomerInfo = new
-                     {
-                             order.Customer.FirstName,
-                             order.Customer.LastName,
-                             order.Customer.Email,
-                             order.Customer.Phone
-                     },
-                     ProductOrders = order.ProductOrders.Select(p => new
-                     {
-                             p.ProductOrderId,
-                             p.MenuCategoryId,
-                             p.CategoryName,
-                             p.ProductId,
-                             p.ProductName,
-                             p.OrderQty,
-                             p.Price,
-                             p.Units,
-                             p.Discount,
-                             p.TotalSale
-                    }),
-                    order.OrderDate,
-                    order.DeliveryNotes,
-                    order.PickUp,
-                    order.Street,
-                    order.UnitNo,
-                    order.City,
-                    order.State,
-                    order.ZipCode,
-                    order.itemQuantity,
-                    order.TotalOrderSale,
-                    order.OrderStatus
-            });
+            return Ok(
+               new
+               {
+                   order,
+                   Driver = (order.Driver != null) ? new
+                   {
+                       order.Driver.FirstName,
+                       order.Driver.LastName
+                   } : null,
+                   Customer = (order.Customer != null) ? new
+                   {
+                       order.Customer.FirstName,
+                       order.Customer.LastName,
+                       order.Customer.Phone
+                   } : null
+               });
         }
 
-        // PUT: api/Orders/5
+        // PUT: api/Orders/id
         [ResponseType(typeof(void))]
         public IHttpActionResult PutOrder(int id, Order order)
         {
@@ -114,7 +84,30 @@ namespace CannDash.API.Controllers
                 return BadRequest();
             }
 
-            db.Entry(order).State = EntityState.Modified;
+            var dbOrder = db.Orders.Find(id);
+            if (order.ProductOrders != null)
+            {
+                // delete the product orders in the existing order which no longer
+                // exist in the given order
+                foreach (var productOrder in dbOrder.ProductOrders.ToList())
+                    if (order.ProductOrders
+                        .All(p => p.ProductOrderId != productOrder.ProductOrderId))
+                        db.ProductOrders.Remove(productOrder);
+
+                // update or insert the product orders from the given order, in the existing order
+                foreach (var productOrder in order.ProductOrders)
+                {
+                    var existing =
+                        dbOrder.ProductOrders.FirstOrDefault(
+                            p => p.ProductOrderId == productOrder.ProductOrderId);
+                    if (existing != null)
+                        db.Entry(existing).CurrentValues.SetValues(productOrder);
+                    else
+                        dbOrder.ProductOrders.Add(productOrder);
+                }
+            }
+
+            db.Entry(dbOrder).CurrentValues.SetValues(order);
 
             try
             {
@@ -144,24 +137,32 @@ namespace CannDash.API.Controllers
                 return BadRequest(ModelState);
             }
 
-            var orderNumbers = db.Orders.Where(o => o.DispensaryId == order.DispensaryId).Select(o => o.DispensaryOrderNo).ToArray();
-            var dispensaries = db.Dispensaries.Where(d => d.DispensaryId == order.DispensaryId).Select(d => d.CompanyName).ToArray();
-            int previousOrderNo = 0;
+            // Create a unique Dispensary Order number for each dispensary.
+            var previousOrderNo =
+                   db.Orders.Where(o => o.DispensaryId == order.DispensaryId)
+                            .Select(o => o.DispensaryOrderNo)
+                            .DefaultIfEmpty(0).Max();
 
-            if (orderNumbers.Any(item => item != null))
-            {
-                previousOrderNo = Convert.ToInt32(orderNumbers.Last().Remove(0,4));
-                order.DispensaryOrderNo = orderNumbers.First().Substring(0, 3).ToUpper() + '-' + Convert.ToString(previousOrderNo + 1);
-            }
-            else
-            {
-                order.DispensaryOrderNo = dispensaries.First().Substring(0, 3).ToUpper() + '-' + Convert.ToString(previousOrderNo + 1);
-            }
-  
+            // Check previous order number and add 1
+            order.DispensaryOrderNo = previousOrderNo + 1;
+
+            // Set order time to when order is placed.
             order.OrderDate = DateTime.Now;
+
+            // Default order status is 1 = pending until confirmed by driver via text twillio.
             order.OrderStatus = 1;
+
+            // Add the order to the Orders table in database
             db.Orders.Add(order);
+
+            // Save changes to database.
             db.SaveChanges();
+
+
+            //////////////////////
+            // TWILIO SECTION  //
+            ////////////////////
+
 
             //Customer Twilio SMS notification
             var customer = db.Customers.FirstOrDefault(c => c.CustomerId == order.CustomerId);
@@ -174,7 +175,7 @@ namespace CannDash.API.Controllers
             var messageToDriver = "New Delivery:" + "\n" +
                                     "Customer: " + customer.FirstName + " " + customer.LastName + "\n" +
                                     "Phone:" + customer.Phone + "\n" +
-                                    "Delivery Address:" + customer.Street + ", " + customer.State + " " + customer.ZipCode;
+                                    "Delivery Address:" + order.Street + ", " + order.State + " " + order.ZipCode;
 
             HelperFunctions.TwilioSMS.SendSms(driver.Phone, messageToDriver);
 
