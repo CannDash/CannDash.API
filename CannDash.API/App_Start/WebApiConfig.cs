@@ -4,6 +4,8 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Web.Http;
 using System.Web.Http.Cors;
+using CannDash.API.App_Start;
+using System.Web.Configuration;
 
 namespace CannDash.API
 {
@@ -32,6 +34,15 @@ namespace CannDash.API
                 routeTemplate: "api/{controller}/{id}",
                 defaults: new { id = RouteParameter.Optional }
             );
+
+            var clientID = WebConfigurationManager.AppSettings["auth0:ClientId"];
+            var clientSecret = WebConfigurationManager.AppSettings["auth0:ClientSecret"];
+
+            config.MessageHandlers.Add(new JsonWebTokenValidationHandler()
+            {
+                Audience = clientID,
+                SymmetricKey = clientSecret
+            });
         }
     }
 }
